@@ -223,7 +223,7 @@ El archivo `.env` contiene variables de configuración utilizadas por los servic
 Luego de clonar el repositorio, crear el archivo `.env` a partir del ejemplo:
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item mlflow_system/.env.example mlflow_system/.env
 ```
 
 Luego levantar el entorno:
