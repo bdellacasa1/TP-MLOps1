@@ -106,42 +106,6 @@ flowchart TD
 
 ---
 
-## Instrucciones de uso
-
-### Levantar el proyecto
-
-La primera vez, o cuando se modifican Dockerfiles o dependencias:
-
-```bash
-docker compose -f mlflow_system/docker-compose.yml up -d --build
-```
-
-Para ejecuciones posteriores, si no hubo cambios en las imágenes:
-
-```bash
-docker compose -f mlflow_system/docker-compose.yml up -d
-```
-
-### Detener el proyecto
-
-Para detener y eliminar los contenedores:
-
-```bash
-docker compose -f mlflow_system/docker-compose.yml down
-```
-
-> Los datos persistidos en PostgreSQL, MinIO y Airflow se conservan porque utilizan volúmenes de Docker.
-
-Si se desea reiniciar completamente el entorno y eliminar también los volúmenes:
-
-```bash
-docker compose -f mlflow_system/docker-compose.yml down -v
-```
-
-> **Importante:** `down -v` elimina los datos persistidos en los volúmenes.
-
----
-
 ## API
 
 La API fue desarrollada utilizando **FastAPI** y las validaciones de entrada se realizan mediante **Pydantic**.
@@ -216,7 +180,12 @@ validate_api
 
 Luego de un reentrenamiento exitoso, el nuevo modelo `champion` queda disponible para ser utilizado por la API.
 
-## Configuración de variables de entorno
+
+
+
+## Instrucciones de uso
+
+### Configuración de variables de entorno
 
 El archivo `.env` contiene variables de configuración utilizadas por los servicios y no se encuentra versionado en Git por motivos de seguridad.
 
@@ -226,8 +195,68 @@ Luego de clonar el repositorio, crear el archivo `.env` a partir del ejemplo:
 Copy-Item mlflow_system/.env.example mlflow_system/.env
 ```
 
-Luego levantar el entorno:
+Luego se puede levantar el entorno como se indica a continuación.  
 
-```powershell
+### Levantar el proyecto
+
+La primera vez que se ejecuta el proyecto, o cuando se modifican Dockerfiles o dependencias:
+
+```bash
 docker compose -f mlflow_system/docker-compose.yml up -d --build
 ```
+
+Para ejecuciones posteriores, si no hubo cambios en las imágenes:
+
+```bash
+docker compose -f mlflow_system/docker-compose.yml up -d
+```
+
+> **Importante:** en una instalación nueva, o luego de haber eliminado los volúmenes de Docker, todavía no existe un modelo registrado en MLflow.  
+> Por lo tanto, se debe realizar una vez el entrenamiento inicial siguiendo los pasos:
+
+```bash
+docker compose -f mlflow_system/docker-compose.yml exec training python -m src.pipeline
+```
+
+Una vez finalizado el entrenamiento, reiniciar la API para que cargue el modelo `champion`:
+
+```bash
+docker compose -f mlflow_system/docker-compose.yml restart api
+```
+
+El proceso de entrenamiento (src.pipeline):
+
+- descarga y prepara los datos;
+- entrena los modelos XGBoost y Random Forest;
+- evalúa sus métricas;
+- registra los modelos en MLflow;
+- asigna los aliases `champion` y `challenger`.
+
+Luego se puede validar que la API esté operativa accediendo al endpoint:
+
+```text
+GET http://localhost:8000/health
+```
+
+No es necesario volver a entrenar el modelo en cada inicio, ya que PostgreSQL y MinIO utilizan volúmenes persistentes de Docker.
+
+### Detener el proyecto
+
+Para detener y eliminar los contenedores:
+
+```bash
+docker compose -f mlflow_system/docker-compose.yml down
+```
+
+> Los datos persistidos en PostgreSQL, MinIO y Airflow se conservan porque utilizan volúmenes de Docker.
+
+Si se desea reiniciar completamente el entorno y eliminar también los volúmenes:
+
+```bash
+docker compose -f mlflow_system/docker-compose.yml down -v
+```
+
+> **Importante:** `down -v` elimina los datos persistidos en los volúmenes.  
+> Luego de ejecutar este comando será necesario volver a entrenar el modelo siguiendo los pasos de la primera ejecución.
+
+---
