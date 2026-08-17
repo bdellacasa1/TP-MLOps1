@@ -215,3 +215,19 @@ validate_api
 ```
 
 Luego de un reentrenamiento exitoso, el nuevo modelo `champion` queda disponible para ser utilizado por la API.
+
+## Configuración de variables de entorno
+
+El archivo `.env` contiene variables de configuración utilizadas por los servicios y no se encuentra versionado en Git por motivos de seguridad.
+
+Luego de clonar el repositorio, crear el archivo `.env` a partir del ejemplo:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Luego levantar el entorno:
+
+```powershell
+docker compose -f mlflow_system/docker-compose.yml up -d --build
+```
