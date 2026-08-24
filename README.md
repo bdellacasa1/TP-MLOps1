@@ -11,6 +11,16 @@
 
 Implementación productiva con Docker Compose, Apache Airflow, MLflow, PostgreSQL, MinIO y FastAPI.
 
+
+## Servicios disponibles
+| Servicio | URL | Descripción |
+|---|---|---|
+| API REST | http://localhost:8000 | Predicciones online |
+| API Docs | http://localhost:8000/docs | Swagger UI |
+| MLflow UI | http://localhost:5001 | Tracking y Model Registry |
+| Airflow UI | http://localhost:8080 | Orquestación del reentrenamiento |
+| MinIO Console | http://localhost:9001 | Almacenamiento S3 (credenciales en `.env`) |
+
 ## Descripción del proyecto
 
 Este proyecto tiene como objetivo implementar un flujo completo de MLOps a partir del trabajo final realizado en la materia **Aprendizaje de Máquina**.

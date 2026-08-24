@@ -14,19 +14,18 @@ from api.schemas import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-    print(
-        "Iniciando API..."
-    )
-
-    model_service.reload_model()
-
+    print("Iniciando API...")
+    try:
+        # Intentamos cargar el modelo
+        model_service.reload_model()
+        print("Modelo cargado exitosamente.")
+    except Exception as e:
+        # Si el modelo no existe, atrapamos el error pero NO apagamos la API
+        print(f"Advertencia: No se encontró el modelo en MLflow. La API iniciará sin modelo. Detalle: {e}")
+    
     yield
-
-    print(
-        "Deteniendo API..."
-    )
-
+    
+    print("Apagando API...")
 
 app = FastAPI(
     title="Airline Satisfaction API",
@@ -64,17 +63,16 @@ def predict(
 ):
 
     try:
-
         features = request.model_dump(
             by_alias=True
         )
-
-        return model_service.predict(
-            features
-        )
-
+        return model_service.predict(features)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="El modelo aún no está cargado. Ejecuta el pipeline en Airflow primero.",
+        ) from exc
     except Exception as exc:
-
         raise HTTPException(
             status_code=500,
             detail=str(exc),
