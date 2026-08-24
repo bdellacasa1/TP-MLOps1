@@ -5,6 +5,12 @@
 - Belén Della Casa
 - Julián Barceló
 
+## Nivel de evaluación
+
+**Nivel en contenedores (nota 8–10)**
+
+Implementación productiva con Docker Compose, Apache Airflow, MLflow, PostgreSQL, MinIO y FastAPI.
+
 ## Descripción del proyecto
 
 Este proyecto tiene como objetivo implementar un flujo completo de MLOps a partir del trabajo final realizado en la materia **Aprendizaje de Máquina**.
@@ -193,6 +199,9 @@ Luego de clonar el repositorio, crear el archivo `.env` a partir del ejemplo:
 
 ```powershell
 Copy-Item mlflow_system/.env.example mlflow_system/.env
+
+Para Linux
+cp mlflow_system/.env.example mlflow_system/.env
 ```
 
 Luego se puede levantar el entorno como se indica a continuación.  
@@ -258,5 +267,7 @@ docker compose -f mlflow_system/docker-compose.yml down -v
 
 > **Importante:** `down -v` elimina los datos persistidos en los volúmenes.  
 > Luego de ejecutar este comando será necesario volver a entrenar el modelo siguiendo los pasos de la primera ejecución.
+
+> **Nota:** el build requiere ~10 GB libres. Si la partición raíz está llena, configurar Docker con `"data-root"` en `/home`.
 
 ---
