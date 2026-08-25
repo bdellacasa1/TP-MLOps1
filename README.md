@@ -15,11 +15,12 @@ Implementación productiva con Docker Compose, Apache Airflow, MLflow, PostgreSQ
 ## Servicios disponibles
 | Servicio | URL | Descripción |
 |---|---|---|
-| API REST | http://localhost:8000 | Predicciones online |
-| API Docs | http://localhost:8000/docs | Swagger UI |
-| MLflow UI | http://localhost:5001 | Tracking y Model Registry |
-| Airflow UI | http://localhost:8080 | Orquestación del reentrenamiento |
-| MinIO Console | http://localhost:9001 | Almacenamiento S3 (credenciales en `.env`) |
+| **Streamlit UI** | http://localhost:8501 | Interfaz gráfica interactiva para predicciones web |
+| **API REST** | http://localhost:8000 | Predicciones online |
+| **API Docs** | http://localhost:8000/docs | Swagger UI |
+| **MLflow UI** | http://localhost:5001 | Tracking y Model Registry |
+| **Airflow UI** | http://localhost:8080 | Orquestación del reentrenamiento semanal |
+| **MinIO Console** | http://localhost:9001 | Almacenamiento S3 interno (credenciales en `.env`) |
 
 ## Descripción del proyecto
 
@@ -68,7 +69,7 @@ Construir una arquitectura MLOps que permita:
 
 ## Arquitectura general
 
-El proyecto separa el flujo de entrenamiento del flujo de predicción online.
+El proyecto separa el flujo de entrenamiento (orquestado por Airflow) del flujo de predicción e incluye una capa interactiva para el usuario (Streamlit).
 
 ```mermaid
 flowchart TD
@@ -76,9 +77,10 @@ flowchart TD
     subgraph TRAINING["Flujo de entrenamiento"]
         A["Apache Airflow"]
         B["Pipeline de entrenamiento"]
+        C0["Monitoreo de Calidad de Datos"]
         C["Carga y preprocesamiento"]
         D["Entrenamiento XGBoost / Random Forest"]
-        E["Evaluación"]
+        E["Evaluación y Robustez"]
         F["MLflow Tracking"]
         G[("PostgreSQL")]
         H[("MinIO")]
@@ -88,7 +90,8 @@ flowchart TD
         L["@challenger"]
 
         A -->|"Schedule semanal"| B
-        B --> C
+        B --> C0
+        C0 -->|Pass| C
         C --> D
         D --> E
         E --> F
@@ -101,7 +104,7 @@ flowchart TD
     end
 
     subgraph SERVING["Flujo de predicción online"]
-        M["Cliente"]
+        M["Streamlit Web UI"]
         N["FastAPI"]
         O["Validación Pydantic"]
         P["Modelo champion en memoria"]
@@ -113,6 +116,7 @@ flowchart TD
         O --> P
         P --> Q
         Q --> S
+        S -->|"Resultado y Métricas"| M
     end
 
     K -->|"Modelo publicado"| P
@@ -185,7 +189,9 @@ El modelo se reentrena automáticamente de manera semanal.
 El DAG ejecuta las siguientes tareas:
 
 ```text
-run_training_pipeline
+monitor_raw_data (Validación de calidad)
+        ↓
+run_training_pipeline (Entrenamiento)
         ↓
 validate_champion
         ↓
@@ -195,6 +201,27 @@ validate_api
 ```
 
 Luego de un reentrenamiento exitoso, el nuevo modelo `champion` queda disponible para ser utilizado por la API.
+
+---
+
+## 🛡️ Robustez, Calidad de Datos y Gobernanza
+
+El proyecto implementa prácticas avanzadas de ingeniería MLOps para garantizar la calidad del modelo y los datos en producción:
+
+### 1. Validación de Calidad de Datos (Fail-Fast)
+Antes del preprocesamiento, los datos se validan en el DAG de Airflow mediante la tarea `monitor_raw_data` (implementada con un `PythonOperator`). Esta tarea:
+*   Valida la integridad del esquema (columnas esperadas).
+*   Verifica que el porcentaje de valores nulos no supere un umbral crítico (10%).
+*   Aplica lógica de negocio para detectar datos imposibles (edades fuera de rango u horas de retraso negativas).
+
+### 2. Pruebas de Robustez y Fairness
+Se ha integrado un set de pruebas de comportamiento antes de promover un modelo a producción (`src/evaluacion/robustness_tests.py`):
+*   **Test de Perturbación (Estabilidad)**: Inyecta ruido gaussiano aleatorio en las variables para medir que el modelo no sea errático.
+*   **Test de Invarianza (Equidad)**: Valida que el cambio en la variable `Gender` no modifique la predicción de forma discriminatoria (paridad de género).
+*   **Expectativas Direccionales**: Verifica que incrementos lógicos (como más horas de retraso) no incrementen absurdamente la probabilidad de satisfacción.
+
+### 3. Explicabilidad Global (SHAP)
+Cada auditoría genera e integra un gráfico de importancia de variables global utilizando **SHAP (KernelExplainer)**, el cual queda registrado automáticamente como un artefacto (.png) en la corrida correspondiente en **MLflow UI**.
 
 
 
@@ -215,6 +242,16 @@ cp mlflow_system/.env.example mlflow_system/.env
 ```
 
 Luego se puede levantar el entorno como se indica a continuación.  
+
+### Ingesta de Datos Resiliente y Offline (MinIO)
+
+El pipeline ya no depende de internet (`gdown` en Google Drive) para cada entrenamiento. Se ha implementado un esquema local en MinIO:
+
+1.  **Poblar MinIO**: Ejecuta el script de seeding desde tu computadora host. Este script descargará el dataset original por única vez y lo subirá al almacenamiento S3 interno de MinIO:
+    ```bash
+    python3 scripts/seed_minio.py
+    ```
+2.  **Carga Resiliente**: El entrenamiento (`src.pipeline`) priorizará leer de tu caché local (`data/raw/`). Si los archivos no están, los descargará directamente de MinIO usando la red interna rápida de Docker.
 
 ### Levantar el proyecto
 
