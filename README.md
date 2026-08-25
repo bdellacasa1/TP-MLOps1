@@ -186,6 +186,26 @@ La API carga en memoria el modelo `champion` al levantar. Este endpoint permite 
 
 El modelo se reentrena automáticamente de manera semanal.
 
+### Detalles Operativos de Airflow
+
+- **URL de la Interfaz Gráfica (Airflow UI)**: [http://localhost:8080](http://localhost:8080)
+- **ID Real del DAG**: `weekly_airline_retraining`
+- **Programación (Schedule)**: `59 23 * * 0` (Todos los domingos a las 23:59 hs), además de permitir ejecución manual bajo demanda.
+
+#### Paso a paso para operar el DAG en la interfaz gráfica:
+
+1. **Acceder a la Web UI de Airflow**: Abrir en el navegador [http://localhost:8080](http://localhost:8080).
+2. **Localizar el DAG**: En la pantalla principal, buscar en el listado de DAGs por su ID real: `weekly_airline_retraining`.
+3. **Activar/Despausar el DAG**: Asegurarse de activar el interruptor (*toggle switch*) ubicado a la izquierda del nombre del DAG para habilitar su ejecución.
+4. **Ejecutar manualmente (Trigger DAG)**: Para forzar una ejecución bajo demanda, hacer clic en el botón de reproducción (▶️ **Trigger DAG**) en la esquina superior derecha de la vista del DAG.
+5. **Monitorear el progreso**: Ingresar a la vista de *Grid* o *Graph* para visualizar en tiempo real la ejecución secuencial de las tareas:
+   - `monitor_raw_data`: Validación de calidad del dataset crudo (*Fail-Fast*).
+   - `run_training_pipeline`: Reentrenamiento de los modelos y log de métricas/artefactos en MLflow.
+   - `validate_champion`: Verificación de la asignación del alias `champion` en MLflow.
+   - `reload_api_model`: Notificación a la API REST (`POST /reload-model`) para recargar en caliente el modelo `champion`.
+   - `validate_api`: Comprobación de salud de la API REST (`GET /health`).
+6. **Verificar estado final**: Confirmar que todas las tareas se ejecuten exitosamente (estado verde `success`). El modelo `champion` actualizado quedará servido inmediatamente por la API REST sin requerir un reinicio manual de contenedores.
+
 El DAG ejecuta las siguientes tareas:
 
 ```text

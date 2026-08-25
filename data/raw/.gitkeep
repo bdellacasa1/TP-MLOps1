@@ -1,0 +1,1 @@
+# Archivo para mantener la estructura de directorios en Git, evitando que falle el volumen de Airflow en clones limpios.
