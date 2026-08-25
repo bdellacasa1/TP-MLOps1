@@ -82,14 +82,14 @@ flowchart TD
         D["Entrenamiento XGBoost / Random Forest"]
         E["Evaluación y Robustez"]
         F["MLflow Tracking"]
-        G[("PostgreSQL")]
-        H[("MinIO")]
+        G[(PostgreSQL)]
+        H[(MinIO)]
         I["MLflow Model Registry"]
         J["Selección del mejor modelo"]
-        K["@champion"]
-        L["@challenger"]
+        K["Modelo Champion"]
+        L["Modelo Challenger"]
 
-        A -->|"Schedule semanal"| B
+        A -->|Schedule semanal| B
         B --> C0
         C0 -->|Pass| C
         C --> D
@@ -111,16 +111,16 @@ flowchart TD
         Q["Predicción"]
         S["Response JSON"]
 
-        M -->|"POST /predict"| N
+        M -->|POST /predict| N
         N --> O
         O --> P
         P --> Q
         Q --> S
-        S -->|"Resultado y Métricas"| M
+        S -->|Resultado y Métricas| M
     end
 
-    K -->|"Modelo publicado"| P
-    A -->|"Luego del reentrenamiento"| R["POST /reload-model"]
+    K -->|Modelo publicado| P
+    A -->|Luego del reentrenamiento| R["POST /reload-model"]
     R --> N
 ```
 
