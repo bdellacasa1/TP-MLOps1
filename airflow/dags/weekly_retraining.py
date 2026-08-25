@@ -2,6 +2,7 @@ import pendulum
 
 from airflow.sdk import dag, task
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.python import PythonOperator
 
 
 MODEL_NAME = "airline_satisfaction_without_scores"
@@ -27,6 +28,29 @@ API_URL = "http://api:8000"
     tags=["mlops", "airline", "retraining"],
 )
 def weekly_airline_retraining():
+
+    # ---------------------------------------------------------
+    # 0. Monitoreo y validación de calidad del dataset crudo (Clase 1)
+    # ---------------------------------------------------------
+
+    def run_monitoring_check():
+        import sys
+        sys.path.append("/workspace")
+        from src.data.load_data import load_dataset
+        from src.data.monitoring import validate_data_quality
+        
+        print("📥 Cargando dataset para monitoreo...")
+        train_df, test_df = load_dataset()
+        
+        print("📋 Iniciando validaciones...")
+        validate_data_quality(train_df)
+        validate_data_quality(test_df)
+        print("✅ Calidad de datos validada exitosamente.")
+
+    monitor_raw_data = PythonOperator(
+        task_id="monitor_raw_data",
+        python_callable=run_monitoring_check,
+    )
 
     # ---------------------------------------------------------
     # 1. Ejecutar pipeline completo de entrenamiento
@@ -114,7 +138,8 @@ def weekly_airline_retraining():
     # ---------------------------------------------------------
 
     (
-        run_training_pipeline
+        monitor_raw_data
+        >> run_training_pipeline
         >> champion
         >> reload_api_model
         >> validate_api
